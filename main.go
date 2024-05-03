@@ -56,10 +56,13 @@ func parseCommandLine() {
 	}
 }
 
-func readLog() error {
-	file, err := os.Open(logFile)
+func readFile(filePath string) (error, []string) {
+
+	data := make([]string, 0)
+
+	file, err := os.Open(filePath)
     if err != nil {
-       return err
+       return err, []string{}
     }
     defer file.Close()
 
@@ -68,38 +71,23 @@ func readLog() error {
     for scanner.Scan() {
 		line := scanner.Text()
 		if len(line) > 0 {
-			logLines = append(logLines, line)
+			data = append(data, line)
 		}
     }
 
     if err = scanner.Err(); err != nil {
-       return err
+       return err, []string{}
     }
 
-	return  nil
+	return nil, data
 }
 
-func readKeywordFile() error {
-	file, err := os.Open(keywordFile)
-    if err != nil {
-       return err
-    }
-    defer file.Close()
+func readLog() (error, []string) {
+	return readFile(logFile)
+}
 
-    scanner := bufio.NewScanner(file)
-   
-    for scanner.Scan() {
-		line := scanner.Text()
-		if len(line) > 0 {
-			keywords = append(keywords, line)
-		}
-    }
-
-    if err = scanner.Err(); err != nil {
-       return err
-    }
-
-	return nil
+func readKeywordFile() (error, []string) {
+	return readFile(keywordFile)
 }
 
 func writeLineToOutputFile(line string) bool {
@@ -113,11 +101,10 @@ func writeLineToOutputFile(line string) bool {
 	}
 
 	_, err = f.WriteString(line)
-	f.WriteString("\n\r")
+	f.WriteString("\n")
 	if err != nil {
 		fmt.Println(err)
-   //     f.Close()
-		return false
+  		return false
 	}
 	
 	err = f.Close()
@@ -129,8 +116,9 @@ func writeLineToOutputFile(line string) bool {
 	return true
 }
 
-func scanLinesForKeywords() int {
+func scanLinesForKeywords(keywords []string) int {
 	matchingLineCount:=0
+
 	for lineNumber, line := range(logLines) {
 		for _, word := range(keywords) {
 			if strings.Contains(strings.ToLower(line), strings.ToLower(word)) {
@@ -144,8 +132,10 @@ func scanLinesForKeywords() int {
 					}
 					fmt.Printf(str)
 				}
+
 				writeLineToOutputFile(line)
 				matchingLineCount++
+				
 			}
 		}
 	}
@@ -161,25 +151,24 @@ func scanLinesForKeywords() int {
 func main () {
 	showBanner()
 
-	
-
 	parseCommandLine()
 
 	if eraseOutput {
 		os.Remove(outputFile)
 	}
 
-	err := readKeywordFile()
+	err, keywords := readKeywordFile()
 	if err != nil {
 		fmt.Printf("*** Error : Problem reading keywords (%v).\n", err)
 		os.Exit(-2)
 	}
 
-	err = readLog()
+	err, logLines = readLog()
+
 	if err != nil {
 		fmt.Printf("*** Error : Problem reading logfile (%v).\n", err)
 		os.Exit(-1)
 	}
-
-	scanLinesForKeywords()
+	
+	scanLinesForKeywords(keywords)
 }
