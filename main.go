@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	log_pruner_version = "1.0"
+	log_pruner_version = "1.1"
 	default_output_file = "./OUTPUT.TXT"
 	default_keyword_file = "./KEYWORDS.TXT"
 	default_log_file = "./LOGFILE.TXT"
@@ -23,6 +23,7 @@ var (
 	eraseOutput bool
 	silentRunning bool
 	showLineNumbers bool
+	caseSensitive bool
 
 	logLines []string
 	keywords []string
@@ -41,6 +42,7 @@ func parseCommandLine() {
 	flag.BoolVar(&eraseOutput, "erase", false, "Erase output file before writing.")
 	flag.BoolVar(&silentRunning, "silent", false, "Run the utility with no echo to console.")
 	flag.BoolVar(&showLineNumbers, "linenumbers", true, "Display line numbers of those lines containing a text match.")
+	flag.BoolVar(&caseSensitive, "case", false, "Specifies whether the keyword matching be case sensitive.")
 	flag.Parse()
 
 	if len(keywordFile) == 0 {
@@ -52,7 +54,8 @@ func parseCommandLine() {
 		fmt.Printf("Output file    : '%s'.\n", outputFile)
 		fmt.Printf("Keyword file   : '%s'.\n", keywordFile)
 		fmt.Printf("Erase file     : %v.\n", eraseOutput)
-		fmt.Printf("Line numbers   : %v.\n\n", showLineNumbers)
+		fmt.Printf("Line numbers   : %v.\n", showLineNumbers)
+		fmt.Printf("Case sensitive : %v.\n\n", caseSensitive)
 	}
 }
 
@@ -121,7 +124,14 @@ func scanLinesForKeywords(keywords []string) int {
 
 	for lineNumber, line := range(logLines) {
 		for _, word := range(keywords) {
-			if strings.Contains(strings.ToLower(line), strings.ToLower(word)) {
+			matchFound := false
+			if caseSensitive {
+				matchFound = strings.Contains(line, word)
+			} else {
+				matchFound = strings.Contains(strings.ToLower(line), strings.ToLower(word))
+			}
+
+			if matchFound {
 
 				if !silentRunning {
 					str := ""
